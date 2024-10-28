@@ -17,10 +17,3 @@ use App\Http\Controllers\PaymentController;
 Route::get('/', function () {
     return view('welcome');
 });
-
-Route::post('/authorize-payment', [PaymentController::class, 'authorizePayment']);
-Route::post('/pix-payment', [PaymentController::class, 'createPixPayment']);
-Route::post('/credit-payment', [PaymentController::class, 'createCreditCardPayment']);
-Route::post('/debit-payment', [PaymentController::class, 'createDebitCardPayment']);
-Route::get('/payment-status/{tid}', [PaymentController::class, 'checkPaymentStatus']);
-Route::post('/cancel-payment/{tid}', [PaymentController::class, 'cancelPayment']);

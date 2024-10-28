@@ -31,6 +31,9 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /**
+     * credencias de serviço do e.REDE api
+     */
     'rede' => [
     'pv' => env('REDE_PV', '51280125'),
     'token' => env('REDE_TOKEN', '7a970672007c4164a43d609463cfe7b0'),
