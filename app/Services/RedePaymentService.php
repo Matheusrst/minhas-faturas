@@ -2,240 +2,177 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Rede\eRede;
+use Rede\Store;
+use Rede\Transaction;
+use Rede\Environment;
+use Exception;
 
 class RedePaymentService
 {
-    private $pv; // Código PV (Ponto de Venda) fornecido pela e.Rede.
-    private $token; // Token de autenticação fornecido pela e.Rede.
-    private $baseUrl; // URL base da API da e.Rede.
+    private $erede;
+    protected $store;
 
     public function __construct()
     {
-        // Inicializa as variáveis de configuração, buscando o PV e o Token do arquivo de configuração 'services.php'
-        $this->pv = config('services.rede.pv');
-        $this->token = config('services.rede.token');
-        $this->baseUrl = 'https://sandbox-erede.useredecloud.com.br/v1/transactions';
-    }
+        $filiation = env('REDE_PV');
+        $token = env('REDE_TOKEN');
+        $environment = env('REDE_ENVIRONMENT', 'sandbox');
 
-    /**
-     * Autenticação e headers básicos
-     * Retorna o array de cabeçalhos necessários para autenticação na API da e.Rede
-     */
-    private function getHeaders()
-    {
-        return [
-            'Content-Type' => 'application/json', // Define o conteúdo como JSON
-            'Authorization' => 'Bearer ' . $this->token, // Cabeçalho de autorização com Bearer Token
-            'PV' => $this->pv, // Cabeçalho com o código PV
-        ];
+        if (is_null($filiation) || is_null($token)) {
+            throw new Exception("Filiation and token must be provided and cannot be null.");
+        }
+
+        $env = $environment === 'production' ? Environment::production() : Environment::sandbox();
+        $this->store = new Store($filiation, $token, $env);
+        $this->erede = new eRede($this->store);
     }
 
     /**
      * Autoriza uma transação
-     * @param array $data - Dados da transação que serão enviados para a autorização
-     * @return array - Resultado da autorização
+     *
+     * @param array $data Dados da transação
+     * @return array Resposta da transação
      */
-    public function authorizeTransaction($data)
+    public function authorizeTransaction(array $data)
     {
-        $url = $this->baseUrl;
+        try {
+            $this->validateTransactionData($data);
 
-        // Envia uma requisição POST com os dados da transação para a URL de autorização
-        $response = Http::withHeaders($this->getHeaders())
-            ->post($url, $data);
+            $transaction = $this->createTransaction($data);
 
-        // Verifica se a requisição foi bem-sucedida
-        if ($response->successful()) {
-            return [
-                'error' => false,
-                'message' => 'Transação autorizada com sucesso.',
-                'details' => $response->json(), // Retorna os detalhes da resposta
-                'status_code' => $response->status()
-            ];
+            // Tenta autorizar a transação
+            $response = $this->authorize($transaction, $data);
+
+            // Verifica se a transação foi autorizada com sucesso
+            if ($response->getReturnCode() === '00') {
+                return $response;
+            }
+
+            $this->logError('Erro ao autorizar a transação:', $response, $data);
+            throw new Exception($response->getReturnMessage());
+
+        } catch (Exception $e) {
+            return $this->handleException($e, $data);
         }
+    }
 
-        // Retorna mensagem de erro e detalhes em caso de falha
+    /**
+     * Captura uma transação
+     *
+     * @param string $tid ID da transação
+     * @param float $amount Valor da transação
+     * @return array Resposta da captura
+     */
+    public function captureTransaction($tid, $amount)
+    {
+        try {
+            $transaction = new Transaction($amount);
+            $transaction->setTid($tid);
+
+            // Tenta capturar a transação
+            $response = $this->erede->capture($transaction);
+
+            if ($response->getReturnCode() === '00') {
+                return $response;
+            }
+
+            $this->logError('Erro ao capturar a transação:', $response, ['tid' => $tid, 'amount' => $amount]);
+            throw new Exception($response->getReturnMessage());
+
+        } catch (Exception $e) {
+            return $this->handleException($e, ['tid' => $tid, 'amount' => $amount]);
+        }
+    }
+
+    /**
+     * Valida os dados da transação
+     *
+     * @param array $data
+     * @throws Exception
+     */
+    private function validateTransactionData(array $data)
+    {
+        if (empty($data['kind'])) {
+            throw new Exception("Required parameter 'kind' is missing.");
+        }
+    }
+
+    /**
+     * Cria uma instância de Transaction com os dados fornecidos
+     *
+     * @param array $data
+     * @return Transaction
+     */
+    private function createTransaction(array $data)
+    {
+        return (new Transaction($data['amount']))
+            ->setReference($data['reference'])
+            ->capture($data['capture'] ?? false)
+            ->setInstallments($data['installments'] ?? 1)
+            ->creditCard(
+                $data['cardNumber'],
+                $data['securityCode'],
+                $data['expirationMonth'],
+                $data['expirationYear'],
+                $data['cardholderName']
+            )
+            ->setSoftDescriptor($data['softDescriptor'] ?? '')
+            ->setSubscription($data['subscription'] ?? false)
+            ->setKind($data['kind'])
+            ->setOrigin($data['origin'] ?? 1)
+            ->setDistributorAffiliation($data['distributorAffiliation'] ?? 0)
+            ->setBrandTid(isset($data['brandTid']) ? (int)$data['brandTid'] : null)
+            ->setStorageCard($data['storageCard'] ?? '0');
+    }
+
+    /**
+     * Autoriza a transação
+     *
+     * @param Transaction $transaction
+     * @param array $data
+     * @return mixed
+     */
+    private function authorize(Transaction $transaction, array $data)
+    {
+        return isset($data['transactionCredentials']['credentialId'])
+            ? $this->erede->authorize($transaction, $data['transactionCredentials']['credentialId'])
+            : $this->erede->authorize($transaction);
+    }
+
+    /**
+     * Lida com exceções e registra erros
+     *
+     * @param Exception $e
+     * @param array $data
+     * @return array
+     */
+    private function handleException(Exception $e, array $data)
+    {
+        Log::error('Erro na transação:', [
+            'message' => $e->getMessage(),
+            'data' => $data,
+        ]);
         return [
             'error' => true,
-            'message' => $response->json()['returnMessage'] ?? 'Erro ao autorizar a transação.',
-            'details' => $response->json(),
-            'status_code' => $response->status()
+            'message' => $e->getMessage(),
         ];
     }
 
     /**
-     * Cria um pagamento PIX na API e.Rede
-     * @param int $amount - Valor do pagamento
-     * @param string $reference - Referência do pagamento
-     * @return array - Resultado da criação do pagamento PIX
+     * Registra erros em log
+     *
+     * @param string $message
+     * @param mixed $response
+     * @param array $data
      */
-    public function createPixPayment($amount, $reference)
+    private function logError(string $message, $response, array $data)
     {
-        $url = "{$this->baseUrl}/payments/pix"; // URL para pagamentos PIX
-
-        $data = [
-            'amount' => (int) $amount,
-            'currency' => 'BRL', // Define a moeda como Real Brasileiro
-            'reference' => $reference,
-            'kind' => 'pix', // Tipo de pagamento
-            'capture' => true, // Indica captura automática do pagamento
-        ];
-
-        // Envia a requisição POST para criar o pagamento PIX
-        $response = Http::withHeaders($this->getHeaders())
-            ->post($url, $data);
-
-        // Retorna o resultado em caso de sucesso ou erro
-        if ($response->successful()) {
-            return $response->json();
-        }
-
-        $errorDetails = $response->json();
-
-        return [
-            'error' => true,
-            'message' => $errorDetails['returnMessage'] ?? 'Erro ao criar pagamentos PIX.',
-            'details' => $errorDetails,
-            'status_code' => $response->status()
-        ];
-    }
-
-    /**
-     * Cria um pagamento via cartão de crédito
-     * @param int $amount - Valor do pagamento
-     * @param string $reference - Referência do pagamento
-     * @param string $cardNumber - Número do cartão
-     * @param string $cardHolderName - Nome do titular do cartão
-     * @param int $expirationMonth - Mês de expiração
-     * @param int $expirationYear - Ano de expiração
-     * @param string $securityCode - Código de segurança (CVV)
-     * @return array - Resultado da criação do pagamento com cartão de crédito
-     */
-    public function createCreditCardPayment($amount, $reference, $cardNumber, $cardHolderName, $expirationMonth, $expirationYear, $securityCode)
-    {
-        $url = "{$this->baseUrl}/payments/credit"; // URL para pagamento com cartão de crédito
-
-        $data = [
-            'amount' => (int) $amount,
-            'currency' => 'BRL',
-            'reference' => $reference,
-            'kind' => 'credit',
-            'capture' => true,
-            'card' => [
-                'number' => $cardNumber,
-                'holderName' => $cardHolderName,
-                'expirationMonth' => $expirationMonth,
-                'expirationYear' => $expirationYear,
-                'securityCode' => $securityCode,
-            ]
-        ];
-
-        // Envia a requisição POST para criar o pagamento com cartão de crédito
-        $response = Http::withHeaders($this->getHeaders())
-            ->post($url, $data);
-
-        if ($response->successful()) {
-            return $response->json();
-        }
-
-        return [
-            'error' => true,
-            'message' => $response->json()['returnMessage'] ?? 'Erro ao criar o pagamento com cartão de crédito.',
-            'details' => $response->json(),
-            'status_code' => $response->status()
-        ];
-    }
-
-    /**
-     * Cria um pagamento via cartão de débito
-     * @param int $amount - Valor do pagamento
-     * @param string $reference - Referência do pagamento
-     * @param string $cardNumber - Número do cartão
-     * @param string $cardHolderName - Nome do titular do cartão
-     * @param int $expirationMonth - Mês de expiração
-     * @param int $expirationYear - Ano de expiração
-     * @param string $securityCode - Código de segurança (CVV)
-     * @param string $returnUrl - URL de retorno após a autenticação do pagamento
-     * @return array - Resultado da criação do pagamento com cartão de débito
-     */
-    public function createDebitCardPayment($amount, $reference, $cardNumber, $cardHolderName, $expirationMonth, $expirationYear, $securityCode, $returnUrl)
-    {
-        $url = "{$this->baseUrl}/payments/debit"; // URL para pagamento com cartão de débito
-
-        $data = [
-            'amount' => (int) $amount,
-            'currency' => 'BRL',
-            'reference' => $reference,
-            'kind' => 'debit',
-            'capture' => true,
-            'card' => [
-                'number' => $cardNumber,
-                'holderName' => $cardHolderName,
-                'expirationMonth' => $expirationMonth,
-                'expirationYear' => $expirationYear,
-                'securityCode' => $securityCode,
-            ],
-            'urls' => [
-                'returnUrl' => $returnUrl
-            ]
-        ];
-
-        $response = Http::withHeaders($this->getHeaders())
-            ->post($url, $data);
-
-        if ($response->successful()) {
-            return $response->json();
-        }
-
-        return [
-            'error' => true,
-            'message' => $response->json()['returnMessage'] ?? 'Erro ao criar o pagamento via cartão de débito.',
-            'details' => $response->json(),
-            'status_code' => $response->status()
-        ];
-    }
-
-    /**
-     * Verifica o status de uma transação PIX
-     * @param string $tid - ID da transação
-     * @return array - Status da transação
-     */
-    public function checkPaymentStatus($tid)
-    {
-        $url = "{$this->baseUrl}/payments/{$tid}"; // URL para consulta de status da transação
-
-        $response = Http::withHeaders($this->getHeaders())
-            ->get($url);
-
-        if ($response->successful()) {
-            return $response->json();
-        }
-
-        return [
-            'error' => true,
-            'message' => $response->json()['returnMessage'] ?? 'Erro ao verificar status do pagamento.',
-        ];
-    }
-
-    /**
-     * Cancela uma transação PIX
-     * @param string $tid - ID da transação a ser cancelada
-     * @return array - Resultado do cancelamento da transação
-     */
-    public function cancelPayment($tid)
-    {
-        $url = "{$this->baseUrl}/payments/{$tid}/refund"; // URL para cancelar a transação
-
-        $response = Http::withHeaders($this->getHeaders())
-            ->post($url);
-
-        if ($response->successful()) {
-            return $response->json();
-        }
-
-        return [
-            'error' => true,
-            'message' => $response->json()['returnMessage'] ?? 'Erro ao cancelar o pagamento.',
-        ];
+        Log::error($message, [
+            'return_code' => $response->getReturnCode(),
+            'return_message' => $response->getReturnMessage(),
+            'data' => $data,
+        ]);
     }
 }

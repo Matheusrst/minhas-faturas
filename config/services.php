@@ -34,9 +34,9 @@ return [
     /**
      * credencias de serviço do e.REDE api
      */
-    'rede' => [
-    'pv' => env('REDE_PV', '51280125'),
-    'token' => env('REDE_TOKEN', '7a970672007c4164a43d609463cfe7b0'),
-    'base_url' => env('REDE_BASE_URL', 'https://sandbox-erede.useredecloud.com.br'),
-],
+    'erede' => [
+    'base_url' => env('EREDE_BASE_URL', 'https://sandbox-erede.useredecloud.com.br/v1'),
+    'pv' => env('EREDE_PV'),
+    'token' => env('EREDE_TOKEN'),
+    ],
 ];

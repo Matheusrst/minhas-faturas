@@ -1,192 +1,239 @@
-<?php 
+<?php
 
 namespace App\Http\Controllers;
 
 use App\Services\RedePaymentService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 class PaymentController extends Controller
 {
-    protected $redePaymentService;
+    private $paymentService;
 
-    // Injeta o serviço de pagamento da e.Rede
-    public function __construct(RedePaymentService $redePaymentService)
+    public function __construct(RedePaymentService $paymentService)
     {
-        $this->redePaymentService = $redePaymentService;
+        $this->paymentService = $paymentService;
     }
 
     /**
-     * Autoriza um pagamento via cartão
-     * @param Request $request - Requisição contendo os dados do pagamento
-     * @return \Illuminate\Http\JsonResponse - Resposta JSON com o status da autorização
+     * Autoriza o pagamento
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function authorizePayment(Request $request)
     {
-        // Valida os campos necessários para a autorização do pagamento
+        try {
+            // Validação dos dados de entrada
+            $this->validatePaymentRequest($request);
+
+            // Monta os dados na ordem correta
+            $data = $this->buildPaymentData($request);
+
+            // Chama o serviço de pagamento para autorizar a transação
+            $response = $this->paymentService->authorizeTransaction($data);
+
+            // Verifica se houve erro na resposta
+            return $this->handleAuthorizationResponse($response, $data);
+
+        } catch (Exception $e) {
+            Log::error('Erro ao autorizar o pagamento:', [
+                'message' => $e->getMessage(),
+                'data' => $request->all(),
+            ]);
+
+            return response()->json([
+                'error' => true,
+                'message' => 'Erro ao autorizar o pagamento.',
+                'details' => $e->getMessage(),
+                'status_code' => 400,
+            ], 400);
+        }
+    }
+
+    /**
+     * Captura o pagamento
+     *
+     * @param Request $request
+     * @param string $tid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function capturePayment(Request $request, $tid)
+    {
+        try {
+            // Verifica se o TID foi passado
+            if (empty($tid)) {
+                throw new Exception('Transaction ID (TID) é necessário.');
+            }
+
+            // Validação dos dados de entrada
+            $this->validateCaptureRequest($request);
+
+            $amount = $request->input('amount');
+
+            // Chama o serviço para capturar a transação
+            $response = $this->paymentService->captureTransaction($tid, $amount);
+
+            // Verifica se houve erro na resposta
+            return $this->handleCaptureResponse($response, $tid, $amount);
+
+        } catch (Exception $e) {
+            Log::error('Erro ao capturar o pagamento:', [
+                'message' => $e->getMessage(),
+                'tid' => $tid,
+                'amount' => $request->input('amount'),
+            ]);
+
+            return response()->json([
+                'error' => true,
+                'message' => 'Erro ao capturar o pagamento.',
+                'details' => $e->getMessage(),
+                'status_code' => 400,
+            ], 400);
+        }
+    }
+
+    /**
+     * Valida os dados do pagamento
+     *
+     * @param Request $request
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    private function validatePaymentRequest(Request $request)
+    {
         $request->validate([
-            'amount' => 'required|int',
+            'capture' => 'required|boolean',
+            'kind' => 'required|string',
             'reference' => 'required|string',
-            'installments' => 'required|numeric',
+            'amount' => 'required|numeric',
+            'installments' => 'required|integer',
             'cardholderName' => 'required|string',
             'cardNumber' => 'required|string',
-            'expirationMonth' => 'required|numeric',
-            'expirationYear' => 'required|numeric',
+            'expirationMonth' => 'required|string',
+            'expirationYear' => 'required|string',
             'securityCode' => 'required|string',
             'softDescriptor' => 'nullable|string',
             'subscription' => 'nullable|boolean',
-            'origin' => 'nullable|numeric', 
-            'distributorAffiliation' => 'nullable|numeric', 
-            'brandTid' => 'nullable|string',
+            'origin' => 'nullable|integer',
+            'distributorAffiliation' => 'nullable|integer',
+            'brandTid' => 'nullable|integer',
             'storageCard' => 'nullable|string',
-            'transactionCredentials' => 'required|array',
             'transactionCredentials.credentialId' => 'required|string',
         ]);
-
-        // Obtem os dados da requisição necessários para a autorização
-        $data = $request->only([
-            'capture', 'kind', 'reference', 'amount', 'installments', 
-            'cardholderName', 'cardNumber', 'expirationMonth', 
-            'expirationYear', 'securityCode', 'softDescriptor', 
-            'subscription', 'origin', 'distributorAffiliation', 
-            'brandTid', 'storageCard', 'transactionCredentials'
-        ]);
-
-        // Verifica se os dados de afiliação são válidos
-        if (!isset($data['distributorAffiliation']) || empty($data['distributorAffiliation'])) {
-            unset($data['distributorAffiliation']);
-        }
-
-        // Chama o serviço de pagamento para autorizar a transação
-        $response = $this->redePaymentService->authorizeTransaction($data);
-
-        // Retorna a resposta da autorização como JSON
-        return response()->json($response);
     }
 
     /**
-     * Cria um pagamento PIX
-     * @param Request $request - Requisição contendo valor e referência do pagamento PIX
-     * @return \Illuminate\Http\JsonResponse - Resposta JSON com o status da criação do pagamento PIX
+     * Monta os dados do pagamento
+     *
+     * @param Request $request
+     * @return array
      */
-    public function createPixPayment(Request $request)
+    private function buildPaymentData(Request $request)
     {
-        // Validação dos dados de pagamento PIX
+        return [
+            'capture' => $request->input('capture', false),
+            'kind' => $request->input('kind', 'credit'),
+            'reference' => $request->input('reference', 'pedido123'),
+            'amount' => $request->input('amount'),
+            'installments' => $request->input('installments', 1),
+            'cardholderName' => $request->input('cardholderName'),
+            'cardNumber' => $request->input('cardNumber'),
+            'expirationMonth' => $request->input('expirationMonth'),
+            'expirationYear' => $request->input('expirationYear'),
+            'securityCode' => $request->input('securityCode'),
+            'softDescriptor' => $request->input('softDescriptor', 'My Store'),
+            'subscription' => $request->input('subscription'),
+            'origin' => $request->input('origin'),
+            'distributorAffiliation' => $request->input('distributorAffiliation'),
+            'brandTid' => $request->input('brandTid'),
+            'storageCard' => $request->input('storageCard'),
+            'transactionCredentials' => [
+                'credentialId' => $request->input('transactionCredentials.credentialId'),
+            ],
+        ];
+    }
+
+    /**
+     * Valida os dados da captura
+     *
+     * @param Request $request
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    private function validateCaptureRequest(Request $request)
+    {
         $request->validate([
-            'amount' => 'required|numeric',
-            'reference' => 'required|string',
+            'amount' => 'required|integer|min:1',
         ]);
+    }
 
-        // Extrai os dados de valor e referência da requisição
-        $amount = $request->input('amount');
-        $reference = $request->input('reference');
+    /**
+     * Lida com a resposta da autorização
+     *
+     * @param array $response
+     * @param array $data
+     * @return \Illuminate\Http\JsonResponse
+     */
+    private function handleAuthorizationResponse(array $response, array $data)
+    {
+        if (isset($response['error'])) {
+            Log::error('Erro ao autorizar a transação:', [
+                'message' => $response['message'] ?? 'Erro ao autorizar a transação.',
+                'details' => $response,
+                'data' => $data,
+            ]);
 
-        // Chama o serviço para criar o pagamento PIX
-        $response = $this->redePaymentService->createPixPayment($amount, $reference);
-
-        // Retorna resposta em caso de erro ou sucesso
-        if (isset($response['error']) && $response['error']) {
             return response()->json([
-                'status' => 'error',
-                'message' => $response['message'] ?? 'Erro ao processar pagamento PIX.',
-                'details' => $response
-            ], 500);
+                'error' => true,
+                'message' => $response['message'] ?? 'Erro ao autorizar a transação.',
+                'details' => $response,
+                'status_code' => 400,
+            ], 400);
         }
+
+        Log::info('Transação autorizada com sucesso:', ['response' => $response]);
 
         return response()->json([
-            'status' => 'success',
-            'data' => $response
-        ], 200);
-    }
-
-    /**
-     * Cria um pagamento com cartão de crédito
-     * @param Request $request - Requisição contendo os dados do cartão e do pagamento
-     * @return \Illuminate\Http\JsonResponse - Resposta JSON com o status da criação do pagamento
-     */
-    public function createCreditCardPayment(Request $request)
-    {
-        // Validação dos dados de pagamento com cartão de crédito
-        $request->validate([
-            'amount' => 'required|numeric',
-            'reference' => 'required|string',
-            'cardNumber' => 'required|string',
-            'cardHolderName' => 'required|string',
-            'expirationMonth' => 'required|numeric',
-            'expirationYear' => 'required|numeric',
-            'securityCode' => 'required|string',
+            'error' => false,
+            'message' => 'Transação autorizada com sucesso.',
+            'data' => $response,
+            'status_code' => 200,
         ]);
-
-        // Chama o serviço para criar o pagamento com cartão de crédito
-        $response = $this->redePaymentService->createCreditCardPayment(
-            $request->input('amount'),
-            $request->input('reference'),
-            $request->input('cardNumber'),
-            $request->input('cardHolderName'),
-            $request->input('expirationMonth'),
-            $request->input('expirationYear'),
-            $request->input('securityCode')
-        );
-
-        return response()->json($response);
     }
 
     /**
-     * Cria um pagamento com cartão de débito
-     * @param Request $request - Requisição contendo os dados do cartão e do pagamento
-     * @return \Illuminate\Http\JsonResponse - Resposta JSON com o status da criação do pagamento
+     * Lida com a resposta da captura
+     *
+     * @param array $response
+     * @param string $tid
+     * @param float $amount
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function createDebitCardPayment(Request $request)
+    private function handleCaptureResponse(array $response, string $tid, float $amount)
     {
-        // Validação dos dados de pagamento com cartão de débito
-        $request->validate([
-            'amount' => 'required|numeric',
-            'reference' => 'required|string',
-            'cardNumber' => 'required|string',
-            'cardHolderName' => 'required|string',
-            'expirationMonth' => 'required|numeric',
-            'expirationYear' => 'required|numeric',
-            'securityCode' => 'required|string',
-            'returnUrl' => 'required|url', // URL de retorno obrigatória após a autenticação
+        if (isset($response['error'])) {
+            Log::error('Erro ao capturar a transação:', [
+                'message' => $response['message'] ?? 'Erro ao capturar a transação.',
+                'details' => $response,
+                'tid' => $tid,
+                'amount' => $amount,
+            ]);
+
+            return response()->json([
+                'error' => true,
+                'message' => $response['message'] ?? 'Erro ao capturar a transação.',
+                'details' => $response,
+                'status_code' => 400,
+            ], 400);
+        }
+
+        Log::info('Transação capturada com sucesso:', ['response' => $response]);
+
+        return response()->json([
+            'error' => false,
+            'message' => 'Transação capturada com sucesso.',
+            'data' => $response,
+            'status_code' => 200,
         ]);
-
-        // Chama o serviço para criar o pagamento com cartão de débito
-        $response = $this->redePaymentService->createDebitCardPayment(
-            $request->input('amount'),
-            $request->input('reference'),
-            $request->input('cardNumber'),
-            $request->input('cardHolderName'),
-            $request->input('expirationMonth'),
-            $request->input('expirationYear'),
-            $request->input('securityCode'),
-            $request->input('returnUrl')
-        );
-
-        return response()->json($response);
-    }
-
-    /**
-     * Verifica o status de um pagamento
-     * @param string $tid - ID da transação
-     * @return \Illuminate\Http\JsonResponse - Resposta JSON com o status do pagamento
-     */
-    public function checkPaymentStatus($tid)
-    {
-        // Chama o serviço para verificar o status da transação
-        $response = $this->redePaymentService->checkPaymentStatus($tid);
-
-        return response()->json($response);
-    }
-
-    /**
-     * Cancela um pagamento
-     * @param string $tid - ID da transação a ser cancelada
-     * @return \Illuminate\Http\JsonResponse - Resposta JSON com o status do cancelamento
-     */
-    public function cancelPayment($tid)
-    {
-        // Chama o serviço para cancelar a transação
-        $response = $this->redePaymentService->cancelPayment($tid);
-
-        return response()->json($response);
     }
 }

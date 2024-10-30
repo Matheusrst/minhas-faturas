@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "cb2ec622228dbde70c0b1c4bd3bb2d53",
+    "content-hash": "7ca58a95aa0b16dcd7bd538e3b71b4d5",
     "packages": [
         {
             "name": "brick/math",
@@ -134,6 +134,57 @@
                 }
             ],
             "time": "2023-12-11T17:09:12+00:00"
+        },
+        {
+            "name": "developersrede/erede-php",
+            "version": "5.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/DevelopersRede/erede-php.git",
+                "reference": "f9e6aa07b70d547e96bdd325ab2c3969e81efbbd"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/DevelopersRede/erede-php/zipball/f9e6aa07b70d547e96bdd325ab2c3969e81efbbd",
+                "reference": "f9e6aa07b70d547e96bdd325ab2c3969e81efbbd",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-json": "*",
+                "monolog/monolog": "*",
+                "php": "^8.1",
+                "psr/log": "*"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^v3.11.0",
+                "phpstan/phpstan": "^1.8.6",
+                "phpunit/phpunit": "^9.5.0",
+                "sebastian/phpcpd": "^6.0.0",
+                "squizlabs/php_codesniffer": "^3.7"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Rede\\": "src/Rede"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "João Batista Neto",
+                    "email": "neto.joaobatista@gmail.com"
+                }
+            ],
+            "description": "e.Rede integration SDK",
+            "support": {
+                "issues": "https://github.com/DevelopersRede/erede-php/issues",
+                "source": "https://github.com/DevelopersRede/erede-php/tree/5.2.1"
+            },
+            "time": "2023-03-19T22:19:29+00:00"
         },
         {
             "name": "dflydev/dot-access-data",
