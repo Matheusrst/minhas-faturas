@@ -104,7 +104,7 @@ class PaymentController extends Controller
     {
         $request->validate([
             'capture' => 'required|boolean',
-            'kind' => 'required|string',
+            'credit' => 'required|string',
             'reference' => 'required|string',
             'amount' => 'required|numeric',
             'installments' => 'required|integer',
@@ -133,8 +133,8 @@ class PaymentController extends Controller
     {
         return [
             'capture' => $request->input('capture', false),
-            'kind' => $request->input('kind', 'credit'),
-            'reference' => $request->input('reference', 'pedido123'),
+            'kind' => $request->input('credit'),
+            'reference' => $request->input('reference'),
             'amount' => $request->input('amount'),
             'installments' => $request->input('installments', 1),
             'cardholderName' => $request->input('cardholderName'),

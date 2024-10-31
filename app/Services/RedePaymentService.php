@@ -38,7 +38,7 @@ class RedePaymentService
     public function authorizeTransaction(array $data)
     {
         try {
-            $this->validateTransactionData($data);
+           // $this->validateTransactionData($data);
 
             $transaction = $this->createTransaction($data);
 
@@ -96,8 +96,8 @@ class RedePaymentService
     {
         if (empty($data['kind'])) {
             throw new Exception("Required parameter 'kind' is missing.");
-        }
-    }
+       }
+   }
 
     /**
      * Cria uma instância de Transaction com os dados fornecidos
@@ -106,26 +106,31 @@ class RedePaymentService
      * @return Transaction
      */
     private function createTransaction(array $data)
-    {
-        return (new Transaction($data['amount']))
-            ->setReference($data['reference'])
-            ->capture($data['capture'] ?? false)
-            ->setInstallments($data['installments'] ?? 1)
-            ->creditCard(
-                $data['cardNumber'],
-                $data['securityCode'],
-                $data['expirationMonth'],
-                $data['expirationYear'],
-                $data['cardholderName']
-            )
-            ->setSoftDescriptor($data['softDescriptor'] ?? '')
-            ->setSubscription($data['subscription'] ?? false)
-            ->setKind($data['kind'])
-            ->setOrigin($data['origin'] ?? 1)
-            ->setDistributorAffiliation($data['distributorAffiliation'] ?? 0)
-            ->setBrandTid(isset($data['brandTid']) ? (int)$data['brandTid'] : null)
-            ->setStorageCard($data['storageCard'] ?? '0');
-    }
+{
+    // Cria a transação com os parâmetros básicos
+    $transaction = (new Transaction($data['amount']))
+        ->setReference($data['reference'])
+        ->capture($data['capture'] ?? false)
+        ->setInstallments($data['installments'] ?? 1)
+        ->setSoftDescriptor($data['softDescriptor'] ?? '')
+        ->setSubscription($data['subscription'] ?? false)
+        ->setKind($data['kind']) // Define o tipo de pagamento
+        ->setOrigin($data['origin'] ?? 1)
+        ->setDistributorAffiliation($data['distributorAffiliation'] ?? 0)
+        ->setBrandTid(isset($data['brandTid']) ? (int)$data['brandTid'] : null)
+        ->setStorageCard($data['storageCard'] ?? '0');
+
+    // Configura os dados do cartão de crédito como parte integral da transação
+    $transaction->creditCard(
+        $data['cardNumber'] ?? '',        // Número do cartão ou valor em branco
+        $data['securityCode'] ?? '',      // Código de segurança ou valor em branco
+        $data['expirationMonth'] ?? '',   // Mês de expiração ou valor em branco
+        $data['expirationYear'] ?? '',    // Ano de expiração ou valor em branco
+        $data['cardholderName'] ?? ''     // Nome do titular do cartão ou valor em branco
+    );
+
+    return $transaction;
+}
 
     /**
      * Autoriza a transação
