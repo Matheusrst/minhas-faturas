@@ -25,6 +25,7 @@ class PaymentController extends Controller
     public function authorizePayment(Request $request)
     {
         try {
+            dd($request->all());
             // Validação dos dados de entrada
             $this->validatePaymentRequest($request);
 
