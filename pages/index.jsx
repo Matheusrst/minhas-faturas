@@ -3,9 +3,9 @@ import Link from "next/link";
 
 export default function MinhasFaturas() {
   return (
-    <div className="bg-[#C7C7C7] min-h-screen flex flex-col">
+    <div className="bg-[#ffffff] min-h-screen flex flex-col">
       {/* Cabeçalho fixo no topo */}
-      <div className="bg-gray-400 px-4 sm:px-8 py-6 w-full fixed top-0 left-0 right-0 z-10 shadow-lg">
+      <div className="bg-white px-4 sm:px-8 py-6 w-full fixed top-0 left-0 right-0 z-10 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="text-blue-700 font-bold text-xl sm:text-2xl">GRUPO CEDNET</div>
 
@@ -43,8 +43,8 @@ export default function MinhasFaturas() {
       </div>
 
       {/* Tabela de Faturas */}
-      <div className="flex-grow px-4 sm:px-8 py-6 overflow-y-auto bg-[#C7C7C7] mt-10">
-        <div className="bg-[#E2E2E2] rounded-lg p-4 sm:p-8">
+      <div className="flex-grow px-4 sm:px-8 py-6 overflow-y-auto bg-[#ffffff] mt-10">
+        <div className="bg-[#ebebeb] rounded-lg p-4 sm:p-8">
           {/* Cabeçalho da Tabela */}
           <div className="grid grid-cols-1 sm:grid-cols-7 gap-4 sm:gap-6 text-black-300 font-semibold text-lg sm:text-xl border-b-2 border-[#adadad] pb-4 mb-6">
             <div>Código</div>
