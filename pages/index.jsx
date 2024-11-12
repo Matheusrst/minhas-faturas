@@ -4,6 +4,8 @@ import Link from "next/link"; // Importando o Link para navegação
 
 export default function MinhasFaturas() {
   const [faturas, setFaturas] = useState([]);
+  const [selectedFaturas, setSelectedFaturas] = useState([]); // Para armazenar faturas selecionadas
+  const [selectAll, setSelectAll] = useState(false); // Para controlar o checkbox geral
 
   useEffect(() => {
     // Função para buscar as faturas com status 'A Receber' e 'Pendente'
@@ -19,6 +21,23 @@ export default function MinhasFaturas() {
 
     fetchFaturas(); // Chama a função ao carregar o componente
   }, []);
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedFaturas([]); // Deselect all
+    } else {
+      setSelectedFaturas(faturas.map((fatura) => fatura.id)); // Select all
+    }
+    setSelectAll(!selectAll); // Toggle the select all state
+  };
+
+  const handleSelect = (id) => {
+    if (selectedFaturas.includes(id)) {
+      setSelectedFaturas(selectedFaturas.filter((selectedId) => selectedId !== id)); // Remove from selected
+    } else {
+      setSelectedFaturas([...selectedFaturas, id]); // Add to selected
+    }
+  };
 
   return (
     <div className="bg-[#ffffff] min-h-screen flex flex-col">
@@ -66,7 +85,15 @@ export default function MinhasFaturas() {
       <div className="flex-grow px-4 sm:px-8 py-6 overflow-y-auto bg-[#ffffff] mt-10">
         <div className="bg-[#ebebeb] rounded-lg p-4 sm:p-8">
           {/* Cabeçalho da Tabela */}
-          <div className="grid grid-cols-1 sm:grid-cols-7 gap-4 sm:gap-6 text-black-300 font-semibold text-lg sm:text-xl border-b-2 border-[#adadad] pb-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-8 gap-[10px] text-black-300 font-semibold text-lg sm:text-xl border-b-2 border-[#adadad] pb-4 mb-6">
+            <div style={{ width: '5px', height: '24px' }} className="mr-2">
+              <input 
+                type="checkbox" 
+                checked={selectAll} 
+                onChange={handleSelectAll} 
+                className="w-6 h-6" // Tamanho do checkbox ajustado
+              />
+            </div>
             <div>Código</div>
             <div>Vencimento</div>
             <div>Emissão</div>
@@ -79,8 +106,16 @@ export default function MinhasFaturas() {
           {/* Linhas da Tabela */}
           <div className="space-y-4">
             {faturas.map((fatura) => (
-              <div key={fatura.id} className="grid grid-cols-1 sm:grid-cols-7 gap-4 sm:gap-11 text-black bg-[#dddddd] rounded p-4 sm:p-6 text-sm sm:text-lg">
-                <div>{fatura.codigo}</div>
+              <div key={fatura.id} className="grid grid-cols-1 sm:grid-cols-8 gap-[10px] text-black bg-[#dddddd] rounded p-4 sm:p-6 text-sm sm:text-lg">
+                <div className="flex items-center justify-center" style={{ width: '24px', height: '24px' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={selectedFaturas.includes(fatura.id)} 
+                    onChange={() => handleSelect(fatura.id)} 
+                    className="w-6 h-6" // Tamanho do checkbox ajustado
+                  />
+                </div>
+                <div className="ml-[-10px]">{fatura.codigo}</div> {/* Ajuste da margem esquerda */}
                 <div>{new Date(fatura.vencimento).toLocaleDateString()}</div>
                 <div>{new Date(fatura.emissao).toLocaleDateString()}</div>
                 <div>{fatura.parcela}</div>
