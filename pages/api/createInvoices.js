@@ -24,7 +24,13 @@ export default async function handler(req, res) {
     }
   } else if (req.method === 'GET') {
     try {
-      const faturas = await prisma.fatura.findMany(); // Busca todas as faturas
+      // Filtra as faturas com o status "Pago"
+      const faturas = await prisma.fatura.findMany({
+        where: {
+          status: 'Pago', // Filtra para retornar apenas as faturas pagas
+        },
+      });
+
       res.status(200).json(faturas);
     } catch (error) {
       res.status(500).json({ error: "Erro ao buscar faturas" });
