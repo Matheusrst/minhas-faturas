@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useRouter } from 'next/router'; // Importando o hook useRouter
 
 export default function MinhasFaturas() {
   const [faturas, setFaturas] = useState([]); // Estado para armazenar as faturas
   const [numLinhas, setNumLinhas] = useState(5); // Controle de linhas exibidas
   const [error, setError] = useState(null); // Controle de erro
+  const router = useRouter(); // Inicializa o useRouter para redirecionamento
 
   const fetchFaturas = async () => {
     try {
@@ -30,6 +32,14 @@ export default function MinhasFaturas() {
     setNumLinhas((prevNumLinhas) => prevNumLinhas + 5);
   };
 
+  // Função de logout
+  const handleLogout = () => {
+    // Limpar os dados de autenticação do usuário, exemplo:
+    localStorage.removeItem('user'); // ou qualquer outra forma de logout
+    // Redireciona para a página de login
+    router.push('/LoginPage');
+  };
+
   return (
     <div className="bg-[#ffffff] min-h-screen flex flex-col">
       {/* Cabeçalho */}
@@ -37,7 +47,11 @@ export default function MinhasFaturas() {
         <div className="flex items-center justify-between">
           <div className="text-blue-700 font-bold text-xl sm:text-2xl">GRUPO CEDNET</div>
           <div className="flex items-center space-x-4 ml-auto">
-            <div className="flex items-center space-x-3 bg-[#2B6FC9] text-white px-6 py-3 rounded-lg shadow-md hover:shadow-xl cursor-pointer transition-all">
+            {/* Botão Nova Consulta com função de logout */}
+            <div
+              onClick={handleLogout} // Ao clicar, desloga o usuário
+              className="flex items-center space-x-3 bg-[#2B6FC9] text-white px-6 py-3 rounded-lg shadow-md hover:shadow-xl cursor-pointer transition-all"
+            >
               <span className="text-lg">Nova Consulta</span>
             </div>
           </div>

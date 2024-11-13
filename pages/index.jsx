@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { CreditCard, QrCode, Barcode, ShoppingCart } from "lucide-react"; 
-import Link from "next/link"; 
+import Link from "next/link";
+import { useRouter } from 'next/router'; // Importando o hook useRouter
 
 export default function MinhasFaturas() {
   const [faturas, setFaturas] = useState([]);
   const [selectedFaturas, setSelectedFaturas] = useState([]); // Para armazenar faturas selecionadas
   const [selectAll, setSelectAll] = useState(false); // Para controlar o checkbox geral
+  const router = useRouter(); // Inicializa o useRouter para redirecionamento
 
   useEffect(() => {
     // Função para buscar as faturas com status 'A Receber' e 'Pendente'
@@ -39,6 +41,14 @@ export default function MinhasFaturas() {
     }
   };
 
+  // Função para deslogar e redirecionar para a página de login
+  const handleLogout = () => {
+    // Limpa os dados de autenticação do usuário, exemplo:
+    localStorage.removeItem('user'); // ou qualquer outra forma que esteja utilizando para armazenar o login
+    // Redireciona para a página de login
+    router.push('/LoginPage');
+  };
+
   return (
     <div className="bg-[#ffffff] min-h-screen flex flex-col">
       {/* Cabeçalho fixo no topo */}
@@ -49,7 +59,10 @@ export default function MinhasFaturas() {
           {/* Cards para os botões de Nova Consulta e Carrinho */}
           <div className="flex items-center space-x-4 ml-auto">
             {/* Card para o botão Nova Consulta */}
-            <div className="flex items-center space-x-3 bg-[#2B6FC9] text-white px-6 py-3 rounded-lg shadow-md hover:shadow-xl cursor-pointer transition-all">
+            <div
+              onClick={handleLogout} // Ao clicar no botão Nova Consulta, desloga o usuário
+              className="flex items-center space-x-3 bg-[#2B6FC9] text-white px-6 py-3 rounded-lg shadow-md hover:shadow-xl cursor-pointer transition-all"
+            >
               <span className="text-lg">Nova Consulta</span>
             </div>
 
