@@ -1,14 +1,25 @@
 import { useEffect, useState } from "react";
-import { CreditCard, QrCode, Barcode, ShoppingCart } from "lucide-react"; 
+import { CreditCard, QrCode, Barcode, ShoppingCart } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from 'next/router';
+import { useRouter } from "next/router";
 import Cookies from "js-cookie";
 
+// Define o tipo para uma fatura
+interface Fatura {
+  id: string;
+  codigo: string;
+  vencimento: string;
+  emissao: string;
+  parcela: number;
+  status: string;
+  valor: number;
+}
+
 export default function MinhasFaturas() {
-  const [faturas, setFaturas] = useState([]);
-  const [selectedFaturas, setSelectedFaturas] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
-  const [showCard, setShowCard] = useState(true);
+  const [faturas, setFaturas] = useState<Fatura[]>([]);
+  const [selectedFaturas, setSelectedFaturas] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState<boolean>(false);
+  const [showCard, setShowCard] = useState<boolean>(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -33,7 +44,7 @@ export default function MinhasFaturas() {
     setSelectAll(!selectAll);
   };
 
-  const handleSelect = (id) => {
+  const handleSelect = (id: string) => {
     if (selectedFaturas.includes(id)) {
       setSelectedFaturas(selectedFaturas.filter((selectedId) => selectedId !== id));
     } else {
@@ -41,21 +52,20 @@ export default function MinhasFaturas() {
     }
   };
 
-  const isVencida = (vencimento) => {
+  const isVencida = (vencimento: string) => {
     const hoje = new Date();
     const vencimentoDate = new Date(vencimento);
     return vencimentoDate < hoje;
   };
 
   const temFaturaAtrasada = () => {
-    return faturas.some(fatura => isVencida(fatura.vencimento));
+    return faturas.some((fatura) => isVencida(fatura.vencimento));
   };
 
-  // Função de logout atribuída ao botão "Nova Consulta"
   const handleLogout = () => {
-    Cookies.remove("userCpf"); // Remove o cookie de autenticação
-    sessionStorage.setItem("logout", "true"); // Define uma chave temporária para sinalizar o logout
-    router.push('/LoginPage'); // Redireciona para a página de login
+    Cookies.remove("userCpf");
+    sessionStorage.setItem("logout", "true");
+    router.push("/LoginPage");
   };
 
   return (
@@ -65,9 +75,8 @@ export default function MinhasFaturas() {
           <div className="text-blue-700 font-bold text-xl sm:text-2xl">GRUPO CEDNET</div>
 
           <div className="flex items-center space-x-4 ml-auto">
-            {/* Botão de logout */}
             <div
-              onClick={handleLogout} // Lógica de logout
+              onClick={handleLogout}
               className="flex items-center space-x-3 bg-[#2B6FC9] text-white px-6 py-3 rounded-lg shadow-md hover:shadow-xl cursor-pointer transition-all"
             >
               <span className="text-lg">Nova Consulta</span>
@@ -90,7 +99,6 @@ export default function MinhasFaturas() {
         </div>
       </div>
 
-      {/* Espaçamento para evitar sobreposição do cabeçalho */}
       <div className="h-24"></div>
 
       <div className="flex justify-center border-b border-[#C7C7C7] px-4 sm:px-8 shadow-lg">
@@ -106,15 +114,14 @@ export default function MinhasFaturas() {
         </Link>
       </div>
 
-      {/* Tabela de Faturas */}
       <div className="flex-grow px-4 sm:px-8 py-6 overflow-y-auto bg-[#ffffff] mt-10">
         <div className="bg-[#ebebeb] rounded-lg p-4 sm:p-8">
           <div className="grid grid-cols-1 sm:grid-cols-8 gap-[10px] text-black-300 font-semibold text-lg sm:text-xl border-b-2 border-[#adadad] pb-4 mb-6">
-            <div style={{ width: '5px', height: '24px' }} className="mr-2">
-              <input 
-                type="checkbox" 
-                checked={selectAll} 
-                onChange={handleSelectAll} 
+            <div style={{ width: "5px", height: "24px" }} className="mr-2">
+              <input
+                type="checkbox"
+                checked={selectAll}
+                onChange={handleSelectAll}
                 className="w-6 h-6"
               />
             </div>
@@ -131,15 +138,20 @@ export default function MinhasFaturas() {
             {faturas.map((fatura) => {
               const vencida = isVencida(fatura.vencimento);
               return (
-                <div 
-                  key={fatura.id} 
-                  className={`grid grid-cols-1 sm:grid-cols-8 gap-[10px] text-black rounded p-4 sm:p-6 text-sm sm:text-lg ${vencida ? 'bg-[#ff929b]' : 'bg-[#dddddd]'}`}
+                <div
+                  key={fatura.id}
+                  className={`grid grid-cols-1 sm:grid-cols-8 gap-[10px] text-black rounded p-4 sm:p-6 text-sm sm:text-lg ${
+                    vencida ? "bg-[#ff929b]" : "bg-[#dddddd]"
+                  }`}
                 >
-                  <div className="flex items-center justify-center" style={{ width: '24px', height: '24px' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={selectedFaturas.includes(fatura.id)} 
-                      onChange={() => handleSelect(fatura.id)} 
+                  <div
+                    className="flex items-center justify-center"
+                    style={{ width: "24px", height: "24px" }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedFaturas.includes(fatura.id)}
+                      onChange={() => handleSelect(fatura.id)}
                       className="w-6 h-6"
                     />
                   </div>
@@ -174,10 +186,7 @@ export default function MinhasFaturas() {
       {showCard && temFaturaAtrasada() && (
         <div className="fixed bottom-6 right-6 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center justify-between">
           <span>Você tem faturas vencidas!</span>
-          <button 
-            onClick={() => setShowCard(false)} 
-            className="text-xl font-bold hover:text-black"
-          >
+          <button onClick={() => setShowCard(false)} className="text-xl font-bold hover:text-black">
             ×
           </button>
         </div>

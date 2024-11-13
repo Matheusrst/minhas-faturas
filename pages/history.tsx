@@ -1,12 +1,22 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useRouter } from 'next/router'; // Importando o hook useRouter
+import { useRouter } from 'next/router';
+
+interface Fatura {
+  id: number;
+  codigo: string;
+  vencimento: string;
+  emissao: string;
+  parcela: string;
+  status: string;
+  valor: number;
+}
 
 export default function MinhasFaturas() {
-  const [faturas, setFaturas] = useState([]); // Estado para armazenar as faturas
-  const [numLinhas, setNumLinhas] = useState(5); // Controle de linhas exibidas
-  const [error, setError] = useState(null); // Controle de erro
-  const router = useRouter(); // Inicializa o useRouter para redirecionamento
+  const [faturas, setFaturas] = useState<Fatura[]>([]);
+  const [numLinhas, setNumLinhas] = useState<number>(5);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const fetchFaturas = async () => {
     try {
@@ -17,7 +27,7 @@ export default function MinhasFaturas() {
       }
 
       const data = await response.json();
-      setFaturas(data); // Define os dados das faturas no estado
+      setFaturas(data);
     } catch (error) {
       console.error("Erro ao buscar faturas:", error);
       setError("Não foi possível carregar as faturas.");
@@ -32,24 +42,19 @@ export default function MinhasFaturas() {
     setNumLinhas((prevNumLinhas) => prevNumLinhas + 5);
   };
 
-  // Função de logout
   const handleLogout = () => {
-    // Limpar os dados de autenticação do usuário, exemplo:
-    localStorage.removeItem('user'); // ou qualquer outra forma de logout
-    // Redireciona para a página de login
+    localStorage.removeItem('user');
     router.push('/LoginPage');
   };
 
   return (
     <div className="bg-[#ffffff] min-h-screen flex flex-col">
-      {/* Cabeçalho */}
       <div className="bg-white px-4 sm:px-8 py-6 w-full fixed top-0 left-0 right-0 z-10 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="text-blue-700 font-bold text-xl sm:text-2xl">GRUPO CEDNET</div>
           <div className="flex items-center space-x-4 ml-auto">
-            {/* Botão Nova Consulta com função de logout */}
             <div
-              onClick={handleLogout} // Ao clicar, desloga o usuário
+              onClick={handleLogout}
               className="flex items-center space-x-3 bg-[#2B6FC9] text-white px-6 py-3 rounded-lg shadow-md hover:shadow-xl cursor-pointer transition-all"
             >
               <span className="text-lg">Nova Consulta</span>
@@ -79,7 +84,6 @@ export default function MinhasFaturas() {
             <p className="text-red-500">{error}</p>
           ) : (
             <>
-              {/* Cabeçalho da Tabela */}
               <div className="grid grid-cols-1 sm:grid-cols-7 gap-4 sm:gap-6 text-black-300 font-semibold text-lg sm:text-xl border-b-2 border-[#adadad] pb-4 mb-6">
                 <div>Código</div>
                 <div>Vencimento</div>
@@ -90,10 +94,9 @@ export default function MinhasFaturas() {
                 <div>Comprovante</div>
               </div>
 
-              {/* Linhas da Tabela */}
-              {faturas.slice(0, numLinhas).map((fatura, index) => (
+              {faturas.slice(0, numLinhas).map((fatura) => (
                 <div
-                  key={index}
+                  key={fatura.id}
                   className="grid grid-cols-1 sm:grid-cols-7 gap-4 sm:gap-11 text-black bg-[#dddddd] rounded p-4 sm:p-6 text-sm sm:text-lg"
                 >
                   <div>{fatura.codigo}</div>
