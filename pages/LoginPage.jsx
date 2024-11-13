@@ -33,7 +33,7 @@ export default function LoginPage() {
     // Adiciona um pequeno intervalo de 1 segundo antes do redirecionamento
     setTimeout(() => {
       router.push('/'); // Isso redireciona para a página index ("/")
-    }, 1000); // 1 segundo de intervalo
+    }, 500); // 1 segundo de intervalo
     
     setError(''); // Limpa qualquer erro
   };

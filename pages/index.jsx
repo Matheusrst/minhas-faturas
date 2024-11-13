@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { CreditCard, QrCode, Barcode, ShoppingCart } from "lucide-react"; 
 import Link from "next/link";
-import { useRouter } from 'next/router'; // Importando o hook useRouter
+import { useRouter } from 'next/router';
 
 export default function MinhasFaturas() {
   const [faturas, setFaturas] = useState([]);
   const [selectedFaturas, setSelectedFaturas] = useState([]); // Para armazenar faturas selecionadas
   const [selectAll, setSelectAll] = useState(false); // Para controlar o checkbox geral
-  const router = useRouter(); // Inicializa o useRouter para redirecionamento
+  const [showCard, setShowCard] = useState(true); // Controle de visibilidade do card de aviso
+  const router = useRouter();
 
   useEffect(() => {
     // Função para buscar as faturas com status 'A Receber' e 'Pendente'
@@ -47,6 +48,18 @@ export default function MinhasFaturas() {
     localStorage.removeItem('user'); // ou qualquer outra forma que esteja utilizando para armazenar o login
     // Redireciona para a página de login
     router.push('/LoginPage');
+  };
+
+  // Função para verificar se a fatura está vencida
+  const isVencida = (vencimento) => {
+    const hoje = new Date();
+    const vencimentoDate = new Date(vencimento);
+    return vencimentoDate < hoje;
+  };
+
+  // Função para verificar se há alguma fatura atrasada
+  const temFaturaAtrasada = () => {
+    return faturas.some(fatura => isVencida(fatura.vencimento)); // Retorna true se alguma fatura estiver atrasada
   };
 
   return (
@@ -111,7 +124,7 @@ export default function MinhasFaturas() {
                 type="checkbox" 
                 checked={selectAll} 
                 onChange={handleSelectAll} 
-                className="w-6 h-6" // Tamanho do checkbox ajustado
+                className="w-6 h-6"
               />
             </div>
             <div>Código</div>
@@ -125,42 +138,61 @@ export default function MinhasFaturas() {
 
           {/* Linhas da Tabela */}
           <div className="space-y-4">
-            {faturas.map((fatura) => (
-              <div key={fatura.id} className="grid grid-cols-1 sm:grid-cols-8 gap-[10px] text-black bg-[#dddddd] rounded p-4 sm:p-6 text-sm sm:text-lg">
-                <div className="flex items-center justify-center" style={{ width: '24px', height: '24px' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={selectedFaturas.includes(fatura.id)} 
-                    onChange={() => handleSelect(fatura.id)} 
-                    className="w-6 h-6" // Tamanho do checkbox ajustado
-                  />
-                </div>
-                <div className="ml-[-10px]">{fatura.codigo}</div> {/* Ajuste da margem esquerda */}
-                <div>{new Date(fatura.vencimento).toLocaleDateString()}</div>
-                <div>{new Date(fatura.emissao).toLocaleDateString()}</div>
-                <div>{fatura.parcela}</div>
-                <div>{fatura.status}</div>
-                <div>{fatura.valor.toFixed(2)}</div>
-                <div className="flex space-x-2 sm:space-x-3">
-                  <Link href="/payment">
+            {faturas.map((fatura) => {
+              const vencida = isVencida(fatura.vencimento); // Verifica se a fatura está vencida
+              return (
+                <div 
+                  key={fatura.id} 
+                  className={`grid grid-cols-1 sm:grid-cols-8 gap-[10px] text-black rounded p-4 sm:p-6 text-sm sm:text-lg ${vencida ? 'bg-[#ff929b]' : 'bg-[#dddddd]'}`}
+                >
+                  <div className="flex items-center justify-center" style={{ width: '24px', height: '24px' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedFaturas.includes(fatura.id)} 
+                      onChange={() => handleSelect(fatura.id)} 
+                      className="w-6 h-6"
+                    />
+                  </div>
+                  <div className="ml-[-10px]">{fatura.codigo}</div>
+                  <div>{new Date(fatura.vencimento).toLocaleDateString()}</div>
+                  <div>{new Date(fatura.emissao).toLocaleDateString()}</div>
+                  <div>{fatura.parcela}</div>
+                  <div>{fatura.status}</div>
+                  <div>{fatura.valor.toFixed(2)}</div>
+                  <div className="flex space-x-2 sm:space-x-3">
+                    <Link href="/payment">
+                      <div className="text-black">
+                        <CreditCard size={24} />
+                      </div>
+                    </Link>
+                    <Link href="/pixModal">
+                      <div className="text-black">
+                        <QrCode size={24} />
+                      </div>
+                    </Link>
                     <div className="text-black">
-                      <CreditCard size={24} />
+                      <Barcode size={24} />
                     </div>
-                  </Link>
-                  <Link href="/pixModal">
-                    <div className="text-black">
-                      <QrCode size={24} />
-                    </div>
-                  </Link>
-                  <div className="text-black">
-                    <Barcode size={24} />
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
+
+      {/* Card de aviso no canto inferior direito */}
+      {showCard && temFaturaAtrasada() && (
+        <div className="fixed bottom-6 right-6 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center justify-between">
+          <span>Você tem faturas vencidas!</span>
+          <button 
+            onClick={() => setShowCard(false)} 
+            className="text-xl font-bold hover:text-black"
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   );
 }
