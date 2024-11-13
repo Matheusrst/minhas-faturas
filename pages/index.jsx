@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { CreditCard, QrCode, Barcode, ShoppingCart } from "lucide-react"; 
-import Link from "next/link"; // Importando o Link para navegação
+import Link from "next/link"; 
 
 export default function MinhasFaturas() {
   const [faturas, setFaturas] = useState([]);
@@ -54,12 +54,19 @@ export default function MinhasFaturas() {
             </div>
 
             {/* Card para o botão do carrinho */}
-            <Link href="/payment"> {/* Usando o Link para navegação */}
-              <div className="flex items-center space-x-3 bg-[#0687F1] text-white px-6 py-3 rounded-lg shadow-md hover:shadow-xl cursor-pointer transition-all">
+            {selectedFaturas.length > 0 ? (
+              <Link href="/payment"> {/* Navegação habilitada apenas se houver faturas selecionadas */}
+                <div className="flex items-center space-x-3 bg-[#0687F1] text-white px-6 py-3 rounded-lg shadow-md hover:shadow-xl cursor-pointer transition-all">
+                  <ShoppingCart size={24} />
+                  <span className="text-lg">Carrinho</span>
+                </div>
+              </Link>
+            ) : (
+              <div className="flex items-center space-x-3 bg-gray-400 text-white px-6 py-3 rounded-lg shadow-md cursor-not-allowed transition-all">
                 <ShoppingCart size={24} />
                 <span className="text-lg">Carrinho</span>
               </div>
-            </Link>
+            )}
           </div>
         </div>
       </div>
@@ -127,9 +134,11 @@ export default function MinhasFaturas() {
                       <CreditCard size={24} />
                     </div>
                   </Link>
-                  <div className="text-black">
-                    <QrCode size={24} />
-                  </div>
+                  <Link href="/pixModal">
+                    <div className="text-black">
+                      <QrCode size={24} />
+                    </div>
+                  </Link>
                   <div className="text-black">
                     <Barcode size={24} />
                   </div>
