@@ -2,86 +2,79 @@ import { useEffect, useState } from "react";
 import { CreditCard, QrCode, Barcode, ShoppingCart } from "lucide-react"; 
 import Link from "next/link";
 import { useRouter } from 'next/router';
+import Cookies from "js-cookie";
 
 export default function MinhasFaturas() {
   const [faturas, setFaturas] = useState([]);
-  const [selectedFaturas, setSelectedFaturas] = useState([]); // Para armazenar faturas selecionadas
-  const [selectAll, setSelectAll] = useState(false); // Para controlar o checkbox geral
-  const [showCard, setShowCard] = useState(true); // Controle de visibilidade do card de aviso
+  const [selectedFaturas, setSelectedFaturas] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const [showCard, setShowCard] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Função para buscar as faturas com status 'A Receber' e 'Pendente'
     async function fetchFaturas() {
       try {
         const response = await fetch("/api/faturas");
         const data = await response.json();
-        setFaturas(data); // Atualiza o estado com as faturas obtidas
+        setFaturas(data);
       } catch (error) {
         console.error("Erro ao buscar faturas:", error);
       }
     }
-
-    fetchFaturas(); // Chama a função ao carregar o componente
+    fetchFaturas();
   }, []);
 
   const handleSelectAll = () => {
     if (selectAll) {
-      setSelectedFaturas([]); // Deselect all
+      setSelectedFaturas([]);
     } else {
-      setSelectedFaturas(faturas.map((fatura) => fatura.id)); // Select all
+      setSelectedFaturas(faturas.map((fatura) => fatura.id));
     }
-    setSelectAll(!selectAll); // Toggle the select all state
+    setSelectAll(!selectAll);
   };
 
   const handleSelect = (id) => {
     if (selectedFaturas.includes(id)) {
-      setSelectedFaturas(selectedFaturas.filter((selectedId) => selectedId !== id)); // Remove from selected
+      setSelectedFaturas(selectedFaturas.filter((selectedId) => selectedId !== id));
     } else {
-      setSelectedFaturas([...selectedFaturas, id]); // Add to selected
+      setSelectedFaturas([...selectedFaturas, id]);
     }
   };
 
-  // Função para deslogar e redirecionar para a página de login
-  const handleLogout = () => {
-    // Limpa os dados de autenticação do usuário, exemplo:
-    localStorage.removeItem('user'); // ou qualquer outra forma que esteja utilizando para armazenar o login
-    // Redireciona para a página de login
-    router.push('/LoginPage');
-  };
-
-  // Função para verificar se a fatura está vencida
   const isVencida = (vencimento) => {
     const hoje = new Date();
     const vencimentoDate = new Date(vencimento);
     return vencimentoDate < hoje;
   };
 
-  // Função para verificar se há alguma fatura atrasada
   const temFaturaAtrasada = () => {
-    return faturas.some(fatura => isVencida(fatura.vencimento)); // Retorna true se alguma fatura estiver atrasada
+    return faturas.some(fatura => isVencida(fatura.vencimento));
+  };
+
+  // Função de logout atribuída ao botão "Nova Consulta"
+  const handleLogout = () => {
+    Cookies.remove("userCpf"); // Remove o cookie de autenticação
+    sessionStorage.setItem("logout", "true"); // Define uma chave temporária para sinalizar o logout
+    router.push('/LoginPage'); // Redireciona para a página de login
   };
 
   return (
     <div className="bg-[#ffffff] min-h-screen flex flex-col">
-      {/* Cabeçalho fixo no topo */}
       <div className="bg-white px-4 sm:px-8 py-6 w-full fixed top-0 left-0 right-0 z-10 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="text-blue-700 font-bold text-xl sm:text-2xl">GRUPO CEDNET</div>
 
-          {/* Cards para os botões de Nova Consulta e Carrinho */}
           <div className="flex items-center space-x-4 ml-auto">
-            {/* Card para o botão Nova Consulta */}
+            {/* Botão de logout */}
             <div
-              onClick={handleLogout} // Ao clicar no botão Nova Consulta, desloga o usuário
+              onClick={handleLogout} // Lógica de logout
               className="flex items-center space-x-3 bg-[#2B6FC9] text-white px-6 py-3 rounded-lg shadow-md hover:shadow-xl cursor-pointer transition-all"
             >
               <span className="text-lg">Nova Consulta</span>
             </div>
 
-            {/* Card para o botão do carrinho */}
             {selectedFaturas.length > 0 ? (
-              <Link href="/payment"> {/* Navegação habilitada apenas se houver faturas selecionadas */}
+              <Link href="/payment">
                 <div className="flex items-center space-x-3 bg-[#0687F1] text-white px-6 py-3 rounded-lg shadow-md hover:shadow-xl cursor-pointer transition-all">
                   <ShoppingCart size={24} />
                   <span className="text-lg">Carrinho</span>
@@ -100,7 +93,6 @@ export default function MinhasFaturas() {
       {/* Espaçamento para evitar sobreposição do cabeçalho */}
       <div className="h-24"></div>
 
-      {/* Área de Tabs logo abaixo do cabeçalho */}
       <div className="flex justify-center border-b border-[#C7C7C7] px-4 sm:px-8 shadow-lg">
         <Link href="/" passHref>
           <button className="text-blue-700 font-semibold text-lg sm:text-xl px-6 sm:px-10 py-4 focus:outline-none border-b-4 border-blue-700">
@@ -117,7 +109,6 @@ export default function MinhasFaturas() {
       {/* Tabela de Faturas */}
       <div className="flex-grow px-4 sm:px-8 py-6 overflow-y-auto bg-[#ffffff] mt-10">
         <div className="bg-[#ebebeb] rounded-lg p-4 sm:p-8">
-          {/* Cabeçalho da Tabela */}
           <div className="grid grid-cols-1 sm:grid-cols-8 gap-[10px] text-black-300 font-semibold text-lg sm:text-xl border-b-2 border-[#adadad] pb-4 mb-6">
             <div style={{ width: '5px', height: '24px' }} className="mr-2">
               <input 
@@ -136,10 +127,9 @@ export default function MinhasFaturas() {
             <div>Pagar</div>
           </div>
 
-          {/* Linhas da Tabela */}
           <div className="space-y-4">
             {faturas.map((fatura) => {
-              const vencida = isVencida(fatura.vencimento); // Verifica se a fatura está vencida
+              const vencida = isVencida(fatura.vencimento);
               return (
                 <div 
                   key={fatura.id} 
@@ -181,7 +171,6 @@ export default function MinhasFaturas() {
         </div>
       </div>
 
-      {/* Card de aviso no canto inferior direito */}
       {showCard && temFaturaAtrasada() && (
         <div className="fixed bottom-6 right-6 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center justify-between">
           <span>Você tem faturas vencidas!</span>

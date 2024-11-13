@@ -1,19 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router'; // Importa o useRouter do Next.js
 
 export default function LoginPage() {
-  const [cpf, setCpf] = useState('');
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [cpf, setCpf] = useState<string>(''); // Aqui você especifica que o estado é do tipo string
+  const [error, setError] = useState<string>(''); // Estado para armazenar a mensagem de erro
+  const [successMessage, setSuccessMessage] = useState<string>(''); // Estado para a mensagem de sucesso
   const router = useRouter(); // Inicializa o useRouter
   
+  // Verifica se o usuário já está autenticado ao carregar a página
+  useEffect(() => {
+    const userCpf = document.cookie.replace(/(?:(?:^|.*;\s*)userCpf\s*=\s*([^;]*).*$)|^.*$/, "$1");
+    const isLogout = sessionStorage.getItem("logout");
+    if (userCpf) {
+      // Se o CPF estiver no cookie, redireciona para a página principal
+      router.push('/');
+    }
+    if (isLogout) {
+      sessionStorage.removeItem("logout");
+    }
+  }, [router]);
+
   // Função para lidar com a mudança no campo CPF
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => { // Tipando corretamente o parâmetro 'e'
     setCpf(e.target.value);
   };
 
+  // Função para definir o cookie no navegador
+  const setCpfCookie = (cpf: string): void => { // Definindo o tipo de retorno da função como void (sem retorno)
+    document.cookie = `userCpf=${cpf}; path=/; Secure; SameSite=Strict`;
+  };
+
   // Função para realizar o login
-  const handleLogin = () => {
+  const handleLogin = (): void => { // Tipo de retorno 'void' pois a função não retorna nada
     // Regex simples para validar o CPF
     const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/; // Valida CPF com máscara
     const cpfNoMaskRegex = /^\d{11}$/; // Valida CPF sem máscara
@@ -29,6 +47,9 @@ export default function LoginPage() {
     setTimeout(() => {
       setSuccessMessage(''); // Remove a mensagem após 3 segundos
     }, 3000);
+
+    // Define o cookie com o CPF
+    setCpfCookie(cpf);
 
     // Adiciona um pequeno intervalo de 1 segundo antes do redirecionamento
     setTimeout(() => {
@@ -73,14 +94,14 @@ export default function LoginPage() {
           Entrar
         </button>
         
-        <div className="flex justify-center mt-4">
+        {/*<div className="flex justify-center mt-4">
           <button 
             onClick={() => window.history.back()} 
             className="py-2 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
           >
             Cancelar
           </button>
-        </div>
+        </div>*/}
       </div>
     </div>
   );
