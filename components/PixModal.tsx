@@ -1,11 +1,11 @@
-// pages/pixModal.jsx
+// pages/pixModal.tsx
 import { useState } from 'react';
-import { QrCode } from 'lucide-react';  // Utilizando o ícone do Lucid
+import { QrCode } from 'lucide-react'; // Utilizando o ícone do Lucid
 
-export default function PixModal() {
-  const [copySuccess, setCopySuccess] = useState(false);
+export default function PixModal(): JSX.Element {
+  const [copySuccess, setCopySuccess] = useState<boolean>(false);
 
-  const handleCopy = () => {
+  const handleCopy = (): void => {
     // Copia o código Pix para a área de transferência
     navigator.clipboard.writeText("00020126970014br.gov.bcb.pix2575");
 
@@ -30,7 +30,7 @@ export default function PixModal() {
 
         <div className="flex flex-col items-center">
           <h2 className="text-lg font-semibold mb-4">Pix Copia e Cola</h2>
-          
+
           {/* QR Code */}
           <div className="w-48 h-48 bg-gray-300 rounded-lg flex items-center justify-center mb-4">
             {/*<img src="/path/to/your/qr-code.png" alt="QR Code" className="w-full h-full object-cover" />*/}
@@ -45,7 +45,7 @@ export default function PixModal() {
               className="border p-2 flex-grow mr-2"
             />
             <button 
-              onClick={handleCopy}  // Chama a função handleCopy para copiar o código
+              onClick={handleCopy} // Chama a função handleCopy para copiar o código
               className="p-2 bg-blue-500 text-white rounded"
             >
               <QrCode size={20} />

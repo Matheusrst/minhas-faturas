@@ -1,11 +1,12 @@
-import { PrismaClient } from '@prisma/client';
+import { NextApiRequest, NextApiResponse } from 'next';
+import { PrismaClient, Fatura } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     try {
-      const { codigo, vencimento, emissao, parcela, status, valor } = req.body;
+      const { codigo, vencimento, emissao, parcela, status, valor }: Omit<Fatura, 'id'> = req.body;
 
       const fatura = await prisma.fatura.create({
         data: {
@@ -20,6 +21,7 @@ export default async function handler(req, res) {
 
       res.status(201).json(fatura); // Retorna a fatura criada
     } catch (error) {
+      console.error(error);
       res.status(500).json({ error: "Erro ao criar fatura" });
     }
   } else if (req.method === 'GET') {
@@ -33,6 +35,7 @@ export default async function handler(req, res) {
 
       res.status(200).json(faturas);
     } catch (error) {
+      console.error(error);
       res.status(500).json({ error: "Erro ao buscar faturas" });
     }
   } else {
