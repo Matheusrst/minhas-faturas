@@ -3,6 +3,7 @@ import { CreditCard, QrCode, Barcode, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import Cookies from "js-cookie";
+import { motion, AnimatePresence } from "framer-motion"; // Importando o framer-motion
 
 // Define o tipo para uma fatura
 interface Fatura {
@@ -83,7 +84,7 @@ export default function MinhasFaturas() {
             </div>
 
             {selectedFaturas.length > 0 ? (
-              <Link href="/payment">
+              <Link href={`/payment?id=${selectedFaturas[0]}`}>
                 <div className="flex items-center space-x-3 bg-[#0687F1] text-white px-6 py-3 rounded-lg shadow-md hover:shadow-xl cursor-pointer transition-all">
                   <ShoppingCart size={24} />
                   <span className="text-lg">Carrinho</span>
@@ -162,12 +163,12 @@ export default function MinhasFaturas() {
                   <div>{fatura.status}</div>
                   <div>{fatura.valor.toFixed(2)}</div>
                   <div className="flex space-x-2 sm:space-x-3">
-                    <Link href="/payment">
+                    <Link href={`/payment?id=${fatura.id}`}>
                       <div className="text-black">
                         <CreditCard size={24} />
                       </div>
                     </Link>
-                    <Link href="/pixModal">
+                    <Link href={`/pixModal?id=${fatura.id}`}>
                       <div className="text-black">
                         <QrCode size={24} />
                       </div>
@@ -183,14 +184,25 @@ export default function MinhasFaturas() {
         </div>
       </div>
 
-      {showCard && temFaturaAtrasada() && (
-        <div className="fixed bottom-6 right-6 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center justify-between">
-          <span>Você tem faturas vencidas!</span>
-          <button onClick={() => setShowCard(false)} className="text-xl font-bold hover:text-black">
-            ×
-          </button>
-        </div>
-      )}
+      <AnimatePresence>
+        {showCard && temFaturaAtrasada() && (
+          <motion.div
+            className="fixed bottom-6 right-6 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center justify-between"
+            initial={{ opacity: 0, y: 50 }} // Começa fora da tela
+            animate={{ opacity: 1, y: 0 }} // Anima até a posição final
+            exit={{ opacity: 0, y: 50 }} // Sai para fora da tela
+            transition={{ duration: 0.5 }} // Duração da animação
+          >
+            <span>Você tem faturas vencidas!</span>
+            <button
+              onClick={() => setShowCard(false)}
+              className="text-xl font-bold hover:text-black"
+            >
+              ×
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
